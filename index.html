@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ancestra: Digital Heritage Archive</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for Playfair Display (Serif) and Lato (Sans-serif) -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom CSS to apply fonts and ensure smooth transitions */
+        body {
+            font-family: 'Lato', sans-serif;
+            background-color: #F8F5EC; /* Muted beige background */
+            color: #333;
+        }
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Playfair Display', serif;
+            color: #5D7E6B; /* Sage Green for titles */
+        }
+        .text-sage-green { color: #5D7E6B; }
+        .bg-sage-green { background-color: #5D7E6B; }
+        .text-terracotta { color: #CD7F6D; }
+        .bg-terracotta { background-color: #CD7F6D; }
+        .text-muted-gold { color: #D4AF37; } /* A muted gold */
+        .border-sage-green { border-color: #5D7E6B; }
+
+        .btn-primary {
+            @apply inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-full shadow-sm text-white bg-sage-green hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sage-green transition-all duration-300 ease-in-out;
+        }
+        .btn-secondary {
+            @apply inline-flex items-center justify-center px-6 py-3 border border-sage-green text-base font-medium rounded-full shadow-sm text-sage-green bg-transparent hover:bg-sage-green hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sage-green transition-all duration-300 ease-in-out;
+        }
+
+        /* Responsive grid adjustments */
+        .artifact-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* Timeline specific styling */
+        .timeline-container {
+            overflow-x: auto;
+            white-space: nowrap;
+            padding: 1rem 0;
+        }
+        .timeline-item {
+            display: inline-block;
+            width: 150px;
+            text-align: center;
+            vertical-align: top;
+            position: relative;
+            cursor: pointer;
+            padding: 0 1rem;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: #ccc;
+            transform: translateY(-50%);
+            z-index: 0;
+        }
+        .timeline-item:first-child::before { left: 50%; }
+        .timeline-item:last-child::before { right: 50%; }
+        .timeline-dot {
+            position: relative;
+            z-index: 1;
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            background-color: #ccc;
+            border-radius: 50%;
+            border: 3px solid #F8F5EC;
+        }
+        .timeline-item.active .timeline-dot,
+        .timeline-item:hover .timeline-dot {
+            background-color: #CD7F6D; /* Terracotta for active/hover */
+        }
+        .timeline-year {
+            font-family: 'Playfair Display', serif;
+            font-weight: 700;
+            margin-top: 0.5rem;
+            color: #5D7E6B;
+        }
+        .timeline-item.active .timeline-year,
+        .timeline-item:hover .timeline-year {
+            color: #CD7F6D;
+        }
+
+        /* Custom Modal Styling */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1000; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: #F8F5EC;
+            margin: auto;
+            padding: 2.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 90%;
+            position: relative;
+            text-align: center;
+        }
+        .modal-close {
+            color: #aaa;
+            position: absolute;
+            top: 1rem;
+            right: 1.5rem;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .modal-close:hover,
+        .modal-close:focus {
+            color: #333;
+            text-decoration: none;
+        }
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        .modal-buttons button {
+            @apply px-4 py-2 rounded-full text-base font-medium transition-all duration-300 ease-in-out;
+        }
+        .modal-buttons .confirm-btn {
+            @apply bg-sage-green text-white hover:bg-opacity-90;
+        }
+        .modal-buttons .cancel-btn {
+            @apply border border-sage-green text-sage-green hover:bg-sage-green hover:text-white;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #5D7E6B;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased">
+    <!-- Header/Navigation Bar -->
+    <header class="bg-beige-100 shadow-sm py-4">
+        <nav class="container mx-auto px-6 flex flex-wrap justify-between items-center">
+            <a href="#" class="flex items-center space-x-2" onclick="showPage('home'); return false;">
+                <img src="https://placehold.co/40x40/5D7E6B/F8F5EC?text=A" alt="Ancestra Logo" class="rounded-full">
+                <span class="text-2xl font-bold text-sage-green font-['Playfair_Display']">Ancestra</span>
+            </a>
+            <div class="block lg:hidden">
+                <button id="nav-toggle" class="flex items-center px-3 py-2 border rounded text-sage-green border-sage-green hover:text-terracotta hover:border-terracotta">
+                    <svg class="fill-current h-3 w-3" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><title>Menu</title><path d="M0 3h20v2H0V3zm0 6h20v2H0V9zm0 6h20v2H0v-2z"/></svg>
+                </button>
+            </div>
+            <div class="w-full flex-grow lg:flex lg:items-center lg:w-auto hidden" id="nav-content">
+                <ul class="pt-4 lg:pt-0 lg:flex justify-end flex-1 items-center">
+                    <li><a href="#" class="block mt-4 lg:inline-block lg:mt-0 text-sage-green hover:text-terracotta px-4 py-2 rounded-full transition duration-300" onclick="showPage('home'); return false;">Home</a></li>
+                    <li><a href="#" class="block mt-4 lg:inline-block lg:mt-0 text-sage-green hover:text-terracotta px-4 py-2 rounded-full transition duration-300" onclick="showPage('gallery'); return false;">Gallery</a></li>
+                    <li><a href="#" class="block mt-4 lg:inline-block lg:mt-0 text-sage-green hover:text-terracotta px-4 py-2 rounded-full transition duration-300" onclick="showPage('timeline'); return false;">Timeline</a></li>
+                    <li><a href="#" class="block mt-4 lg:inline-block lg:mt-0 text-sage-green hover:text-terracotta px-4 py-2 rounded-full transition duration-300" onclick="showPage('collections'); return false;">Collections</a></li>
+                    <li><a href="#" class="block mt-4 lg:inline-block lg:mt-0 text-sage-green hover:text-terracotta px-4 py-2 rounded-full transition duration-300" onclick="showPage('events'); return false;">Events</a></li>
+                    <li><a href="#" class="block mt-4 lg:inline-block lg:mt-0 text-sage-green hover:text-terracotta px-4 py-2 rounded-full transition duration-300" onclick="showPage('upload'); return false;">Upload</a></li>
+                    <li><a href="#" class="block mt-4 lg:inline-block lg:mt-0 text-sage-green hover:text-terracotta px-4 py-2 rounded-full transition duration-300" onclick="showPage('admin'); return false;">Admin</a></li>
+                    <!-- Minimal Community Link (could link to user profile/dashboard later) -->
+                    <li><a href="#" class="block mt-4 lg:inline-block lg:mt-0 text-sage-green hover:text-terracotta px-4 py-2 rounded-full transition duration-300" onclick="showModal('info', 'Community features are being developed! Soon you can follow artisans and engage more deeply.'); return false;">Community</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow container mx-auto px-6 py-8">
+
+        <!-- Loading Spinner -->
+        <div id="loading-spinner" class="fixed inset-0 flex items-center justify-center bg-gray-100 bg-opacity-75 z-[1001] hidden">
+            <div class="spinner"></div>
+        </div>
+
+        <!-- Home Page -->
+        <section id="home-page" class="page-section">
+            <div class="bg-gradient-to-br from-beige-100 to-terracotta-100 rounded-3xl p-8 lg:p-16 text-center shadow-lg">
+                <h1 class="text-4xl lg:text-6xl font-bold leading-tight text-sage-green mb-4">Ancestra</h1>
+                <p class="text-xl lg:text-2xl text-sage-green font-['Lato'] mb-8">"Preserving the Past, Inspiring the Future"</p>
+                <p class="text-lg text-gray-700 max-w-3xl mx-auto mb-12">
+                    Welcome to Ancestra, your digital gateway to the world's rich cultural heritage. We are dedicated to preserving and showcasing invaluable artifacts, traditional knowledge, and the stories that connect us to our ancestors. Explore, learn, and be inspired by the beauty and wisdom of the past.
+                </p>
+                <button class="btn-primary" onclick="showPage('gallery')">Explore the Gallery</button>
+            </div>
+
+            <div class="mt-16">
+                <h2 class="text-3xl font-bold mb-8 text-center text-sage-green">Featured Artifacts</h2>
+                <div id="featured-artifacts" class="artifact-grid">
+                    <!-- Featured artifacts will be loaded here by JavaScript -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Artifacts Gallery Page -->
+        <section id="gallery-page" class="page-section hidden">
+            <h2 class="text-3xl font-bold mb-8 text-center text-sage-green">Artifacts Gallery</h2>
+
+            <!-- Filter and Search -->
+            <div class="flex flex-wrap items-center justify-center gap-4 mb-8 p-4 bg-white rounded-xl shadow-sm">
+                <select id="filter-type" class="p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-green border-sage-green text-gray-700">
+                    <option value="">All Types</option>
+                    <option value="Textiles">Textiles</option>
+                    <option value="Sculptures">Sculptures</option>
+                    <option value="Crafts">Crafts</option>
+                    <option value="Music">Music</option>
+                    <option value="Dance">Dance</option>
+                    <option value="Oral History">Oral History</option>
+                </select>
+                <select id="filter-era" class="p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-green border-sage-green text-gray-700">
+                    <option value="">All Eras</option>
+                    <option value="Ancient">Ancient</option>
+                    <option value="Medieval">Medieval</option>
+                    <option value="Renaissance">Renaissance</option>
+                    <option value="Modern">Modern</option>
+                </select>
+                <input type="text" id="search-bar" placeholder="Search by keyword..." class="p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-green border-sage-green text-gray-700">
+                <button class="btn-primary py-2 px-4 rounded-lg" onclick="applyGalleryFilters()">Apply Filters</button>
+            </div>
+
+            <div id="gallery-grid" class="artifact-grid">
+                <!-- Artifacts will be loaded here by JavaScript -->
+            </div>
+            <div id="no-artifacts-message" class="text-center text-gray-600 mt-8 hidden">
+                No artifacts found matching your criteria.
+            </div>
+        </section>
+
+        <!-- Artifact Detail Page -->
+        <section id="detail-page" class="page-section hidden">
+            <button class="btn-secondary mb-8" onclick="showPage('gallery')">← Back to Gallery</button>
+            <div id="artifact-detail-content" class="bg-white rounded-3xl p-6 lg:p-10 shadow-lg flex flex-col lg:flex-row gap-8">
+                <!-- Artifact details will be loaded here by JavaScript -->
+                <div class="lg:w-1/2">
+                    <img id="detail-image" src="" alt="Artifact Image" class="w-full h-auto rounded-xl object-cover shadow-md">
+                </div>
+                <div class="lg:w-1/2">
+                    <h3 id="detail-title" class="text-4xl font-bold text-sage-green mb-4"></h3>
+                    <p class="text-gray-600 mb-2"><strong class="text-sage-green">Era:</strong> <span id="detail-era"></span></p>
+                    <p class="text-gray-600 mb-2"><strong class="text-sage-green">Region:</strong> <span id="detail-region"></span></p>
+                    <p class="text-gray-600 mb-2"><strong class="text-sage-green">Type:</strong> <span id="detail-type"></span></p>
+                    <p id="detail-story" class="text-lg text-gray-800 leading-relaxed mt-6"></p>
+
+                    <div class="flex items-center gap-4 mt-8">
+                        <button id="like-button" class="flex items-center gap-2 px-4 py-2 rounded-full bg-beige-100 text-sage-green hover:bg-sage-green hover:text-white transition duration-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd" />
+                            </svg>
+                            <span id="like-count">0</span> Likes
+                        </button>
+                        <button class="btn-secondary px-4 py-2" onclick="showModal('info', 'This artifact has been added to your collection!');">Add to Collection</button>
+                    </div>
+
+                    <div class="mt-10 p-6 bg-beige-100 rounded-xl">
+                        <h4 class="text-xl font-bold text-sage-green mb-4">Comments</h4>
+                        <div id="comments-section" class="space-y-4">
+                            <!-- Mock comments -->
+                            <div class="bg-white p-4 rounded-lg shadow-sm">
+                                <p class="font-bold text-gray-800">User A</p>
+                                <p class="text-gray-700">"Absolutely stunning craftsmanship!"</p>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg shadow-sm">
+                                <p class="font-bold text-gray-800">User B</p>
+                                <p class="text-gray-700">"The story behind this piece is truly captivating."</p>
+                            </div>
+                        </div>
+                        <textarea class="w-full mt-4 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-green border-sage-green" rows="3" placeholder="Add a comment..."></textarea>
+                        <button class="btn-primary mt-3 px-4 py-2" onclick="showModal('info', 'Your comment has been submitted for review.');">Post Comment</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Upload Page -->
+        <section id="upload-page" class="page-section hidden">
+            <h2 class="text-3xl font-bold mb-8 text-center text-sage-green">Upload Your Artifact</h2>
+            <div class="bg-white rounded-3xl p-6 lg:p-10 shadow-lg max-w-3xl mx-auto">
+                <p class="text-center text-gray-700 mb-8">
+                    Share your cultural heritage with the world! Please fill out the form below. All submissions are reviewed by our team before being published.
+                </p>
+                <form id="upload-form" class="space-y-6">
+                    <div>
+                        <label for="artifact-image" class="block text-gray-700 text-sm font-bold mb-2">Artifact Image</label>
+                        <input type="file" id="artifact-image" accept="image/*" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-green border-sage-green" required>
+                        <div id="image-preview" class="mt-4 w-48 h-48 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500 hidden">
+                            <img src="" alt="Image Preview" class="max-w-full max-h-full object-contain rounded-xl">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="artifact-title" class="block text-gray-700 text-sm font-bold mb-2">Title</label>
+                        <input type="text" id="artifact-title" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-green border-sage-green" placeholder="e.g., Ancient Silk Brocade" required>
+                    </div>
+                    <div>
+                        <label for="artifact-description" class="block text-gray-700 text-sm font-bold mb-2">Brief Description</label>
+                        <textarea id="artifact-description" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-green border-sage-green" rows="3" placeholder="A short overview of the artifact..." required></textarea>
+                    </div>
+                    <div>
+                        <label for="artifact-era" class="block text-gray-700 text-sm font-bold mb-2">Era</label>
+                        <select id="artifact-era" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-green border-sage-green" required>
+                            <option value="">Select Era</option>
+                            <option value="Ancient">Ancient</option>
+                            <option value="Medieval">Medieval</option>
+                            <option value="Renaissance">Renaissance</option>
+                            <option value="Modern">Modern</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="artifact-region" class="block text-gray-700 text-sm font-bold mb-2">Region</label>
+                        <input type="text" id="artifact-region" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-green border-sage-green" placeholder="e.g., East Asia, West Africa" required>
+                    </div>
+                    <div>
+                        <label for="artifact-type" class="block text-gray-700 text-sm font-bold mb-2">Type</label>
+                        <select id="artifact-type" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-green border-sage-green" required>
+                            <option value="">Select Type</option>
+                            <option value="Textiles">Textiles</option>
+                            <option value="Sculptures">Sculptures</option>
+                            <option value="Crafts">Crafts</option>
+                            <option value="Music">Music</option>
+                            <option value="Dance">Dance</option>
+                            <option value="Oral History">Oral History</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="artifact-story" class="block text-gray-700 text-sm font-bold mb-2">Cultural Story</label>
+                        <textarea id="artifact-story" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-green border-sage-green" rows="6" placeholder="Tell us the detailed cultural story behind this artifact..." required></textarea>
+                    </div>
+                    <button type="submit" class="btn-primary w-full">Submit Artifact</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Interactive Timeline Page -->
+        <section id="timeline-page" class="page-section hidden">
+            <h2 class="text-3xl font-bold mb-8 text-center text-sage-green">Explore by Era</h2>
+            <div class="timeline-container bg-white rounded-3xl p-6 lg:p-10 shadow-lg mb-8">
+                <div id="timeline-eras" class="flex justify-center items-center">
+                    <!-- Timeline items will be dynamically generated here -->
+                </div>
+            </div>
+
+            <div id="timeline-artifacts-display" class="artifact-grid">
+                <!-- Artifacts for the selected era will be displayed here -->
+            </div>
+            <div id="no-timeline-artifacts-message" class="text-center text-gray-600 mt-8 hidden">
+                No artifacts found for this era.
+            </div>
+        </section>
+
+        <!-- Collections Page -->
+        <section id="collections-page" class="page-section hidden">
+            <h2 class="text-3xl font-bold mb-8 text-center text-sage-green">Your Collections</h2>
+            <div class="bg-white rounded-3xl p-6 lg:p-10 shadow-lg max-w-4xl mx-auto">
+                <div class="flex flex-wrap justify-between items-center mb-6">
+                    <p class="text-gray-700 text-lg">Curate your personal galleries.</p>
+                    <button class="btn-secondary py-2 px-4" onclick="showModal('info', 'Creating a new collection feature is coming soon!');">
+                        + New Collection
+                    </button>
+                </div>
+                <div id="user-collections" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- User collections will be loaded here by JavaScript -->
+                </div>
+                <div id="no-collections-message" class="text-center text-gray-600 mt-8 hidden">
+                    You haven't created any collections yet.
+                </div>
+            </div>
+        </section>
+
+        <!-- Events & Workshops Page -->
+        <section id="events-page" class="page-section hidden">
+            <h2 class="text-3xl font-bold mb-8 text-center text-sage-green">Upcoming Events & Workshops</h2>
+            <div class="bg-white rounded-3xl p-6 lg:p-10 shadow-lg max-w-3xl mx-auto">
+                <div id="events-list" class="space-y-6">
+                    <!-- Events will be loaded here by JavaScript -->
+                </div>
+                <div id="no-events-message" class="text-center text-gray-600 mt-8 hidden">
+                    No upcoming events at the moment. Please check back later!
+                </div>
+            </div>
+        </section>
+
+        <!-- Admin Panel Page -->
+        <section id="admin-page" class="page-section hidden">
+            <h2 class="text-3xl font-bold mb-8 text-center text-sage-green">Admin Panel</h2>
+            <div class="bg-white rounded-3xl p-6 lg:p-10 shadow-lg max-w-4xl mx-auto">
+                <h3 class="text-2xl font-bold text-sage-green mb-6">Pending Artifact Uploads</h3>
+                <div id="pending-uploads-list" class="space-y-4">
+                    <!-- Pending uploads will be loaded here by JavaScript -->
+                </div>
+                <div id="no-pending-uploads-message" class="text-center text-gray-600 mt-8 hidden">
+                    No pending uploads.
+                </div>
+
+                <hr class="my-10 border-t-2 border-beige-200">
+
+                <h3 class="text-2xl font-bold text-sage-green mb-6">Manage Site Content (Mock)</h3>
+                <div class="space-y-4">
+                    <button class="btn-secondary py-2 px-4" onclick="showModal('info', 'Tag management features are under development.');">Manage Tags</button>
+                    <button class="btn-secondary py-2 px-4" onclick="showModal('info', 'Feature items from the gallery to display on homepage.');">Feature Items</button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-beige-100 py-8 mt-12">
+        <div class="container mx-auto px-6 text-center text-gray-600">
+            <p>&copy; 2025 Ancestra. All rights reserved. Preserving the Past, Inspiring the Future.</p>
+        </div>
+    </footer>
+
+    <!-- Custom Modal for Alerts/Confirms -->
+    <div id="custom-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="modal-close">&times;</span>
+            <p id="modal-message" class="text-lg text-gray-800"></p>
+            <div id="modal-buttons" class="modal-buttons">
+                <!-- Buttons will be rendered here by JS -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Mock Data ---
+        let artifacts = [
+            {
+                id: 'a1',
+                image: 'https://placehold.co/600x400/CD7F6D/F8F5EC?text=Textile+Art',
+                title: 'Ancient Silk Brocade',
+                description: 'A richly woven silk brocade dating back to the Han Dynasty, featuring intricate dragon motifs and cloud patterns.',
+                era: 'Ancient',
+                region: 'East Asia',
+                type: 'Textiles',
+                story: 'This exquisite silk brocade was discovered in a royal tomb, indicating its significance and the advanced textile techniques of the time. The dragons symbolize imperial power and good fortune, while the clouds represent the heavens. It showcases the mastery of ancient weavers who used natural dyes to achieve vibrant colors that have, remarkably, stood the test of time. This piece provides invaluable insights into the cultural and artistic values of ancient East Asian empires, and its preservation is vital for understanding historical craftsmanship.',
+                likes: 125,
+                featured: true
+            },
+            {
+                id: 'a2',
+                image: 'https://placehold.co/600x400/5D7E6B/F8F5EC?text=Stone+Statue',
+                title: 'Serene Buddha Sculpture',
+                description: 'A finely carved stone sculpture of Buddha, originating from the Gupta period in India, known for its spiritual expression.',
+                era: 'Ancient',
+                region: 'South Asia',
+                type: 'Sculptures',
+                story: 'Crafted during the golden age of Indian art, this Buddha sculpture embodies tranquility and spiritual enlightenment. The smooth contours, meditative posture, and delicate facial features are hallmarks of the Gupta style, which profoundly influenced Buddhist art across Asia. Found in the ruins of a monastic complex, it once served as a focal point for devotion and meditation. Its artistic elegance and spiritual depth continue to inspire contemplation and reverence, making it a cornerstone of ancient South Asian heritage.',
+                likes: 89,
+                featured: true
+            },
+            {
+                id: 'a3',
+                image: 'https://placehold.co/600x400/D4AF37/5D7E6B?text=Mask+Craft',
+                title: 'African Ceremonial Mask',
+                description: 'A vibrant wooden ceremonial mask, hand-carved by the Igbo people, used in traditional rituals and dances.',
+                era: 'Medieval',
+                region: 'West Africa',
+                type: 'Crafts',
+                story: 'This powerful ceremonial mask is a testament to the rich artistic traditions of the Igbo community. Carved from a single piece of wood and adorned with natural pigments, it represents ancestral spirits and deities, playing a crucial role in various social and religious ceremonies. The intricate patterns and expressive features are not merely decorative but convey specific cultural narratives and meanings. Such masks are living symbols of identity, community cohesion, and spiritual connection, passed down through generations.',
+                likes: 72,
+                featured: true
+            },
+            {
+                id: 'a4',
+                image: 'https://placehold.co/600x400/8B4513/F8F5EC?text=Pottery',
+                title: 'Mayan Ceramic Vessel',
+                description: 'An ancient Mayan ceramic vessel, adorned with glyphs and mythological figures, used for ritual offerings.',
+                era: 'Ancient',
+                region: 'Mesoamerica',
+                type: 'Crafts',
+                story: 'This intricately painted ceramic vessel offers a window into the complex cosmology of the ancient Mayan civilization. Discovered in an archaeological dig, its surface is covered with hieroglyphic texts and depictions of mythological scenes, likely relating to creation myths or divine rulers. Used in sacred rituals and funerary practices, these vessels were not just utilitarian objects but powerful cultural statements. They are crucial for deciphering Mayan writing and understanding their sophisticated worldview and artistic expression.',
+                likes: 95,
+                featured: false
+            },
+            {
+                id: 'a5',
+                image: 'https://placehold.co/600x400/CD7F6D/F8F5EC?text=Musical+Inst',
+                title: 'Ottoman Oud',
+                description: 'A beautifully crafted Ottoman oud, a stringed musical instrument, known for its melancholic and expressive sound.',
+                era: 'Medieval',
+                region: 'Middle East',
+                type: 'Music',
+                story: 'The oud, an ancestor to the modern lute, holds a revered place in Middle Eastern music. This particular Ottoman oud, with its distinctive pear-shaped body and fretless neck, represents centuries of musical tradition. Its construction required skilled craftsmanship, often featuring elaborate inlays and fine woods. The oud\'s haunting melodies have narrated countless stories, poems, and emotions across the region, making it a profound symbol of cultural identity and artistic expression that continues to resonate today.',
+                likes: 60,
+                featured: true
+            },
+            {
+                id: 'a6',
+                image: 'https://placehold.co/600x400/5D7E6B/F8F5EC?text=Traditional+Dance',
+                title: 'Maori Haka',
+                description: 'A powerful traditional dance from the Maori people of New Zealand, conveying history, passion, and identity.',
+                era: 'Modern',
+                region: 'Oceania',
+                type: 'Dance',
+                story: 'The Haka is much more than a dance; it is a profound expression of Maori culture, history, and identity. Performed by groups, it involves vigorous foot-stamping, rhythmic body slapping, and vocal chanting. Historically, it was a war challenge, but today it is performed to honor guests, celebrate achievements, or express collective pride and sorrow. Each movement and chant carries deep meaning, connecting performers to their ancestors and conveying powerful emotions to the audience. Documenting and sharing this living heritage ensures its continuity and global appreciation.',
+                likes: 110,
+                featured: false
+            },
+            {
+                id: 'a7',
+                image: 'https://placehold.co/600x400/D4AF37/5D7E6B?text=Oral+History',
+                title: 'Elder\'s Wisdom Tale',
+                description: 'An recorded oral history of a tribal elder, sharing ancient myths and traditions passed down through generations.',
+                era: 'Modern',
+                region: 'Indigenous Americas',
+                type: 'Oral History',
+                story: 'Oral traditions are the backbone of many indigenous cultures, and this recording captures the invaluable wisdom of a tribal elder. Through captivating storytelling, the elder recounts creation myths, ethical teachings, and historical narratives that have been transmitted verbally for centuries. These tales not only entertain but also educate younger generations about their heritage, values, and connection to the land. Preserving these spoken words is critical, as they offer unique perspectives on human history and the diversity of cultural thought.',
+                likes: 45,
+                featured: true
+            },
+             {
+                id: 'a8',
+                image: 'https://placehold.co/600x400/8B4513/F8F5EC?text=Ceremonial+Drum',
+                title: 'West African Djembe',
+                description: 'A hand-carved wooden djembe drum, integral to communal gatherings and storytelling in West African culture.',
+                era: 'Medieval',
+                region: 'West Africa',
+                type: 'Music',
+                story: 'The djembe, originating from the Mandingue people, is a goblet-shaped drum with a goatskin head, known for its rich and varied tonal range. More than just a musical instrument, the djembe is a vital component of West African social life, accompanying dances, ceremonies, and oral storytelling sessions. Each beat and rhythm carries specific cultural significance, communicating messages and emotions within the community. Its vibrant sounds echo the heartbeat of a culture, fostering unity and celebrating heritage through shared musical experiences.',
+                likes: 55,
+                featured: false
+            },
+        ];
+
+        let userCollections = [
+            {
+                id: 'c1',
+                name: 'My Favorite Textiles',
+                artifacts: ['a1'],
+                image: 'https://placehold.co/300x200/CD7F6D/F8F5EC?text=My+Textiles'
+            },
+            {
+                id: 'c2',
+                name: 'Ancient Wonders',
+                artifacts: ['a2', 'a4'],
+                image: 'https://placehold.co/300x200/5D7E6B/F8F5EC?text=Ancient+Wonders'
+            },
+        ];
+
+        let events = [
+            {
+                id: 'e1',
+                title: 'Global Textile Exhibition',
+                date: 'September 15, 2025',
+                location: 'Online Webinar',
+                details: 'A virtual exhibition showcasing traditional textiles from around the world, featuring expert talks.'
+            },
+            {
+                id: 'e2',
+                title: 'Ancient Pottery Workshop',
+                date: 'October 5, 2025',
+                location: 'Community Art Center',
+                details: 'Learn the techniques of ancient pottery making from a master artisan. Limited spots.'
+            },
+            {
+                id: 'e3',
+                title: 'Oral History Storytelling Evening',
+                date: 'November 20, 2025',
+                location: 'Local Library',
+                details: 'Listen to captivating stories and legends shared by community elders.'
+            },
+        ];
+
+        let pendingUploads = [
+            {
+                id: 'pu1',
+                title: 'Hand-woven Basket',
+                description: 'A traditional basket from a remote village, used for gathering.',
+                era: 'Modern',
+                region: 'Southeast Asia',
+                type: 'Crafts',
+                status: 'Pending',
+                image: 'https://placehold.co/300x200/CD7F6D/F8F5EC?text=New+Basket'
+            },
+            {
+                id: 'pu2',
+                title: 'Folk Song Manuscript',
+                description: 'An old manuscript containing regional folk songs and their notations.',
+                era: 'Medieval',
+                region: 'Europe',
+                type: 'Music',
+                status: 'Pending',
+                image: 'https://placehold.co/300x200/5D7E6B/F8F5EC?text=Folk+Song'
+            }
+        ];
+
+        // --- Global Variables & Elements ---
+        const pages = document.querySelectorAll('.page-section');
+        const customModal = document.getElementById('custom-modal');
+        const modalMessage = document.getElementById('modal-message');
+        const modalButtons = document.getElementById('modal-buttons');
+        const modalClose = customModal.querySelector('.modal-close');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        let currentActiveTimelineEra = 'Ancient'; // Default active era for timeline
+
+        // --- Utility Functions ---
+        function showLoadingSpinner() {
+            loadingSpinner.classList.remove('hidden');
+        }
+
+        function hideLoadingSpinner() {
+            loadingSpinner.classList.add('hidden');
+        }
+
+        // Custom Modal Logic
+        // type: 'info', 'confirm'
+        function showModal(type, message, onConfirm = null) {
+            modalMessage.textContent = message;
+            modalButtons.innerHTML = ''; // Clear previous buttons
+
+            if (type === 'info') {
+                const okButton = document.createElement('button');
+                okButton.textContent = 'OK';
+                okButton.classList.add('confirm-btn');
+                okButton.onclick = hideModal;
+                modalButtons.appendChild(okButton);
+            } else if (type === 'confirm') {
+                const confirmButton = document.createElement('button');
+                confirmButton.textContent = 'Confirm';
+                confirmButton.classList.add('confirm-btn');
+                confirmButton.onclick = () => {
+                    if (onConfirm) onConfirm();
+                    hideModal();
+                };
+                modalButtons.appendChild(confirmButton);
+
+                const cancelButton = document.createElement('button');
+                cancelButton.textContent = 'Cancel';
+                cancelButton.classList.add('cancel-btn');
+                cancelButton.onclick = hideModal;
+                modalButtons.appendChild(cancelButton);
+            }
+            customModal.classList.remove('hidden');
+            customModal.style.display = 'flex'; // Ensure it's visible as flex for centering
+        }
+
+        function hideModal() {
+            customModal.classList.add('hidden');
+            customModal.style.display = 'none';
+        }
+
+        modalClose.onclick = hideModal;
+        window.onclick = function(event) {
+            if (event.target == customModal) {
+                hideModal();
+            }
+        };
+
+        // --- Page Navigation ---
+        function showPage(pageId, artifactId = null) {
+            showLoadingSpinner();
+            setTimeout(() => { // Simulate network delay
+                pages.forEach(page => page.classList.add('hidden'));
+                document.getElementById(`${pageId}-page`).classList.remove('hidden');
+
+                window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll to top on page change
+
+                // Call specific render functions
+                if (pageId === 'home') renderHomePage();
+                if (pageId === 'gallery') renderGalleryPage();
+                if (pageId === 'detail' && artifactId) renderArtifactDetailPage(artifactId);
+                if (pageId === 'timeline') renderTimelinePage();
+                if (pageId === 'collections') renderCollectionsPage();
+                if (pageId === 'events') renderEventsPage();
+                if (pageId === 'admin') renderAdminPage();
+
+                hideLoadingSpinner();
+            }, 300); // 300ms delay for demonstration
+        }
+
+        // --- Render Functions for Each Page ---
+
+        // Render Homepage
+        function renderHomePage() {
+            const featuredArtifactsContainer = document.getElementById('featured-artifacts');
+            featuredArtifactsContainer.innerHTML = ''; // Clear previous content
+
+            const featured = artifacts.filter(art => art.featured).slice(0, 6); // Max 6 featured
+            if (featured.length === 0) {
+                featuredArtifactsContainer.innerHTML = '<p class="text-center text-gray-600">No featured artifacts available.</p>';
+                return;
+            }
+
+            featured.forEach(artifact => {
+                const card = `
+                    <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer" onclick="showPage('detail', '${artifact.id}')">
+                        <img src="${artifact.image}" alt="${artifact.title}" class="w-full h-48 object-cover">
+                        <div class="p-4">
+                            <h3 class="text-xl font-bold text-sage-green mb-2">${artifact.title}</h3>
+                            <p class="text-gray-600 text-sm">${artifact.type} | ${artifact.era}</p>
+                        </div>
+                    </div>
+                `;
+                featuredArtifactsContainer.innerHTML += card;
+            });
+        }
+
+        // Render Gallery Page
+        function renderGalleryPage(filteredArtifacts = artifacts) {
+            const galleryGrid = document.getElementById('gallery-grid');
+            const noArtifactsMessage = document.getElementById('no-artifacts-message');
+            galleryGrid.innerHTML = ''; // Clear previous content
+
+            if (filteredArtifacts.length === 0) {
+                noArtifactsMessage.classList.remove('hidden');
+                return;
+            } else {
+                noArtifactsMessage.classList.add('hidden');
+            }
+
+            filteredArtifacts.forEach(artifact => {
+                const card = `
+                    <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer" onclick="showPage('detail', '${artifact.id}')">
+                        <img src="${artifact.image}" alt="${artifact.title}" class="w-full h-48 object-cover">
+                        <div class="p-4">
+                            <h3 class="text-xl font-bold text-sage-green mb-2">${artifact.title}</h3>
+                            <p class="text-gray-600 text-sm">${artifact.type} | ${artifact.era}</p>
+                        </div>
+                    </div>
+                `;
+                galleryGrid.innerHTML += card;
+            });
+        }
+
+        // Apply filters to Gallery
+        function applyGalleryFilters() {
+            const typeFilter = document.getElementById('filter-type').value;
+            const eraFilter = document.getElementById('filter-era').value;
+            const searchBar = document.getElementById('search-bar').value.toLowerCase();
+
+            const filtered = artifacts.filter(artifact => {
+                const matchesType = typeFilter === '' || artifact.type === typeFilter;
+                const matchesEra = eraFilter === '' || artifact.era === eraFilter;
+                const matchesSearch = searchBar === '' ||
+                                      artifact.title.toLowerCase().includes(searchBar) ||
+                                      artifact.description.toLowerCase().includes(searchBar) ||
+                                      artifact.story.toLowerCase().includes(searchBar) ||
+                                      artifact.region.toLowerCase().includes(searchBar);
+                return matchesType && matchesEra && matchesSearch;
+            });
+            renderGalleryPage(filtered);
+        }
+
+        // Render Artifact Detail Page
+        function renderArtifactDetailPage(id) {
+            const artifact = artifacts.find(art => art.id === id);
+            if (!artifact) {
+                showModal('info', 'Artifact not found!');
+                showPage('gallery'); // Go back to gallery
+                return;
+            }
+
+            document.getElementById('detail-image').src = artifact.image;
+            document.getElementById('detail-title').textContent = artifact.title;
+            document.getElementById('detail-era').textContent = artifact.era;
+            document.getElementById('detail-region').textContent = artifact.region;
+            document.getElementById('detail-type').textContent = artifact.type;
+            document.getElementById('detail-story').textContent = artifact.story;
+            document.getElementById('like-count').textContent = artifact.likes;
+
+            const likeButton = document.getElementById('like-button');
+            likeButton.onclick = () => {
+                artifact.likes++;
+                document.getElementById('like-count').textContent = artifact.likes;
+                showModal('info', 'You liked this artifact!');
+            };
+        }
+
+        // Render Upload Page
+        function renderUploadPage() {
+            const uploadForm = document.getElementById('upload-form');
+            const imageInput = document.getElementById('artifact-image');
+            const imagePreviewContainer = document.getElementById('image-preview');
+            const imagePreview = imagePreviewContainer.querySelector('img');
+
+            imageInput.onchange = (event) => {
+                if (event.target.files && event.target.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        imagePreview.src = e.target.result;
+                        imagePreviewContainer.classList.remove('hidden');
+                    };
+                    reader.readAsDataURL(event.target.files[0]);
+                } else {
+                    imagePreviewContainer.classList.add('hidden');
+                    imagePreview.src = '';
+                }
+            };
+
+            uploadForm.onsubmit = (event) => {
+                event.preventDefault();
+                // In a real application, you would send this data to a server
+                const newArtifact = {
+                    id: 'new-' + Date.now(),
+                    image: imagePreview.src || 'https://placehold.co/600x400/CCCCCC/999999?text=Placeholder', // Use preview if available
+                    title: document.getElementById('artifact-title').value,
+                    description: document.getElementById('artifact-description').value.substring(0, 100) + '...', // Truncate for description
+                    era: document.getElementById('artifact-era').value,
+                    region: document.getElementById('artifact-region').value,
+                    type: document.getElementById('artifact-type').value,
+                    story: document.getElementById('artifact-story').value,
+                    likes: 0,
+                    featured: false
+                };
+
+                // Add to pending uploads
+                pendingUploads.push({ ...newArtifact, status: 'Pending' });
+
+                showModal('info', 'Artifact submitted successfully! It will be reviewed by an admin.', () => {
+                    uploadForm.reset(); // Clear form
+                    imagePreviewContainer.classList.add('hidden');
+                    imagePreview.src = '';
+                    showPage('home'); // Redirect after submission
+                });
+            };
+        }
+
+        // Render Timeline Page
+        function renderTimelinePage() {
+            const timelineErasContainer = document.getElementById('timeline-eras');
+            timelineErasContainer.innerHTML = '';
+            const allEras = [...new Set(artifacts.map(art => art.era))].sort(); // Get unique eras and sort them
+
+            allEras.forEach(era => {
+                const eraItem = document.createElement('div');
+                eraItem.classList.add('timeline-item', 'px-4', 'py-2');
+                if (era === currentActiveTimelineEra) {
+                    eraItem.classList.add('active');
+                }
+                eraItem.innerHTML = `
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-year text-sm">${era}</div>
+                `;
+                eraItem.onclick = () => {
+                    currentActiveTimelineEra = era;
+                    renderTimelinePage(); // Re-render to update active state
+                    displayTimelineArtifacts(era);
+                };
+                timelineErasContainer.appendChild(eraItem);
+            });
+            displayTimelineArtifacts(currentActiveTimelineEra); // Display artifacts for the initially active era
+        }
+
+        function displayTimelineArtifacts(era) {
+            const timelineArtifactsDisplay = document.getElementById('timeline-artifacts-display');
+            const noTimelineArtifactsMessage = document.getElementById('no-timeline-artifacts-message');
+            timelineArtifactsDisplay.innerHTML = '';
+
+            const filtered = artifacts.filter(art => art.era === era);
+
+            if (filtered.length === 0) {
+                noTimelineArtifactsMessage.classList.remove('hidden');
+                return;
+            } else {
+                noTimelineArtifactsMessage.classList.add('hidden');
+            }
+
+            filtered.forEach(artifact => {
+                const card = `
+                    <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer" onclick="showPage('detail', '${artifact.id}')">
+                        <img src="${artifact.image}" alt="${artifact.title}" class="w-full h-48 object-cover">
+                        <div class="p-4">
+                            <h3 class="text-xl font-bold text-sage-green mb-2">${artifact.title}</h3>
+                            <p class="text-gray-600 text-sm">${artifact.type}</p>
+                        </div>
+                    </div>
+                `;
+                timelineArtifactsDisplay.innerHTML += card;
+            });
+        }
+
+        // Render Collections Page
+        function renderCollectionsPage() {
+            const userCollectionsContainer = document.getElementById('user-collections');
+            const noCollectionsMessage = document.getElementById('no-collections-message');
+            userCollectionsContainer.innerHTML = '';
+
+            if (userCollections.length === 0) {
+                noCollectionsMessage.classList.remove('hidden');
+                return;
+            } else {
+                noCollectionsMessage.classList.add('hidden');
+            }
+
+            userCollections.forEach(collection => {
+                const firstArtifact = artifacts.find(art => collection.artifacts.includes(art.id));
+                const coverImage = firstArtifact ? firstArtifact.image : collection.image; // Use actual artifact image or placeholder
+
+                const card = `
+                    <div class="bg-beige-100 rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer p-4" onclick="showModal('info', 'Viewing collection: ${collection.name}. It has ${collection.artifacts.length} artifacts.')">
+                        <img src="${coverImage}" alt="Collection Cover" class="w-full h-40 object-cover rounded-lg mb-4">
+                        <h3 class="text-xl font-bold text-sage-green mb-2">${collection.name}</h3>
+                        <p class="text-gray-600 text-sm">${collection.artifacts.length} Artifacts</p>
+                        <button class="text-terracotta hover:underline mt-2 text-sm" onclick="event.stopPropagation(); showModal('info', 'Sharing collection: ${collection.name} via link.');">Share</button>
+                    </div>
+                `;
+                userCollectionsContainer.innerHTML += card;
+            });
+        }
+
+        // Render Events Page
+        function renderEventsPage() {
+            const eventsListContainer = document.getElementById('events-list');
+            const noEventsMessage = document.getElementById('no-events-message');
+            eventsListContainer.innerHTML = '';
+
+            if (events.length === 0) {
+                noEventsMessage.classList.remove('hidden');
+                return;
+            } else {
+                noEventsMessage.classList.add('hidden');
+            }
+
+            events.forEach(event => {
+                const eventCard = `
+                    <div class="bg-beige-100 rounded-xl p-6 shadow-sm hover:shadow-md transition duration-300">
+                        <h3 class="text-xl font-bold text-sage-green mb-2">${event.title}</h3>
+                        <p class="text-gray-700 mb-1"><strong class="text-terracotta">Date:</strong> ${event.date}</p>
+                        <p class="text-gray-700 mb-3"><strong class="text-terracotta">Location:</strong> ${event.location}</p>
+                        <p class="text-gray-800 leading-relaxed">${event.details}</p>
+                    </div>
+                `;
+                eventsListContainer.innerHTML += eventCard;
+            });
+        }
+
+        // Render Admin Page
+        function renderAdminPage() {
+            const pendingUploadsList = document.getElementById('pending-uploads-list');
+            const noPendingUploadsMessage = document.getElementById('no-pending-uploads-message');
+            pendingUploadsList.innerHTML = '';
+
+            const pending = pendingUploads.filter(upload => upload.status === 'Pending');
+
+            if (pending.length === 0) {
+                noPendingUploadsMessage.classList.remove('hidden');
+                return;
+            } else {
+                noPendingUploadsMessage.classList.add('hidden');
+            }
+
+            pending.forEach(upload => {
+                const uploadCard = `
+                    <div class="bg-beige-100 rounded-xl p-4 shadow-sm flex flex-col md:flex-row items-center gap-4">
+                        <img src="${upload.image}" alt="${upload.title}" class="w-24 h-24 object-cover rounded-lg">
+                        <div class="flex-grow">
+                            <h4 class="text-lg font-bold text-sage-green">${upload.title} (${upload.type})</h4>
+                            <p class="text-gray-700 text-sm">${upload.description}</p>
+                            <p class="text-gray-500 text-xs">Status: ${upload.status}</p>
+                        </div>
+                        <div class="flex gap-2 mt-4 md:mt-0">
+                            <button class="btn-primary py-2 px-3 text-sm" onclick="handleUploadApproval('${upload.id}', 'approved')">Approve</button>
+                            <button class="btn-secondary py-2 px-3 text-sm" onclick="handleUploadApproval('${upload.id}', 'rejected')">Reject</button>
+                        </div>
+                    </div>
+                `;
+                pendingUploadsList.innerHTML += uploadCard;
+            });
+        }
+
+        function handleUploadApproval(id, status) {
+            showModal('confirm', `Are you sure you want to ${status} this upload?`, () => {
+                const index = pendingUploads.findIndex(upload => upload.id === id);
+                if (index > -1) {
+                    pendingUploads[index].status = status;
+                    if (status === 'approved') {
+                        // Add approved artifact to main artifacts array
+                        const approvedArtifact = { ...pendingUploads[index], featured: false }; // Not featured by default
+                        artifacts.push(approvedArtifact);
+                        showModal('info', `Artifact "${approvedArtifact.title}" approved and added to gallery!`);
+                    } else {
+                        showModal('info', `Artifact "${pendingUploads[index].title}" rejected.`);
+                    }
+                    renderAdminPage(); // Re-render admin page
+                }
+            });
+        }
+
+
+        // --- Event Listeners and Initial Load ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Mobile navigation toggle
+            const navToggle = document.getElementById('nav-toggle');
+            const navContent = document.getElementById('nav-content');
+            navToggle.addEventListener('click', () => navContent.classList.toggle('hidden'));
+
+            showPage('home'); // Load the home page by default
+        });
+    </script>
+</body>
+</html>
